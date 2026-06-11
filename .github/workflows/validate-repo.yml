@@ -9,10 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest
 
-    defaults:
-      run:
-        working-directory: ${{ github.workspace }}
-
     steps:
       - name: Install tools
         run: pacman -Sy --noconfirm git pacman-contrib
@@ -21,7 +17,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Rebuild repository database
-        run: repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
+        run: |
+          cd "${{ github.workspace }}"
+          repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
 
       - name: Verify generated metadata is committed
-        run: git diff --exit-code -- x86_64/
+        run: |
+          cd "${{ github.workspace }}"
+          git diff --exit-code -- x86_64/

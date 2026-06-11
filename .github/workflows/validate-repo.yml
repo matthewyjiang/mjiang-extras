@@ -1,0 +1,23 @@
+name: validate-repo
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - name: Install tools
+        run: pacman -Sy --noconfirm git pacman-contrib
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Rebuild repository database
+        run: repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
+
+      - name: Verify generated metadata is committed
+        run: git diff --exit-code -- x86_64/

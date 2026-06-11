@@ -10,11 +10,16 @@ echo -e '\n[mjiang-extras]\nSigLevel = Never\nServer = https://repo.matthewyjian
 - git-credential-1password-git-debug r37.3c31135-1
 - razer-coolingpad-linux 0.1.0-1 (`any`)
 
-## Updating the repo
-When you build a new package version, drop the new `*.pkg.tar.zst` files into `x86_64/`, remove the old package archives you no longer want to serve, then refresh the repo database. Packages with `arch=('any')` still go in `x86_64/` in this repo layout, because clients fetch from `https://repo.matthewyjiang.com/$arch`.
+## Publishing packages
+
+Package source repos can publish built packages here automatically with GitHub Actions. See:
+
+- [Publishing packages from other repos](docs/publishing-from-package-repos.md)
+
+For manual updates, build the package, then run:
 
 ```bash
-repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
+scripts/publish-packages.sh /path/to/*.pkg.tar.zst
 ```
 
-After that, commit the updated package files and repo metadata in `x86_64/`, then push to `origin` so the hosted repo gets the new packages.
+The script copies packages into `x86_64/`, removes older archives for the same package names, and refreshes the repo database. Packages with `arch=('any')` still go in `x86_64/` in this repo layout, because clients fetch from `https://repo.matthewyjiang.com/$arch`.

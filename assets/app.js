@@ -44,7 +44,9 @@ async function init() {
 
   try {
     const packages = await loadPackages();
-    state.packages = packages.sort((a, b) => a.name.localeCompare(b.name));
+    state.packages = packages
+      .filter((pkg) => !isDebugPackage(pkg))
+      .sort((a, b) => a.name.localeCompare(b.name));
     state.filtered = [...state.packages];
     state.selectedName = packageNameFromHash() || state.packages[0]?.name || null;
 
@@ -188,6 +190,10 @@ function normalizePackage(desc, files) {
     files,
     downloadUrl: filename ? `${REPO.archPath}/${filename}` : "",
   };
+}
+
+function isDebugPackage(pkg) {
+  return pkg.name.endsWith("-debug");
 }
 
 function filterPackages(query) {

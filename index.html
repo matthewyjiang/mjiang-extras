@@ -43,10 +43,9 @@
       <main>
         <section class="hero">
           <div class="hero-copy">
-            <h1>A small, well&#8209;kept Arch package registry.</h1>
+            <h1>A small shelf of Matt&rsquo;s Arch extras.</h1>
             <div class="hero-actions">
               <a class="button primary" href="#packages">Browse packages</a>
-              <button class="button ghost" type="button" data-copy-config>Copy pacman config</button>
             </div>
           </div>
 
@@ -57,7 +56,7 @@
                 class="icon-button"
                 type="button"
                 data-copy-config
-                aria-label="Copy pacman config"
+                aria-label="Copy setup commands"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="8" y="8" width="13" height="13" rx="2" />
@@ -67,13 +66,10 @@
             </div>
             <pre><code>curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -
 sudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14
-
-[mjiang-extras]
-SigLevel = Required
-Server = https://repo.matthewyjiang.com/$arch</code></pre>
+printf '\n[mjiang-extras]\nSigLevel = Required\nServer = https://repo.matthewyjiang.com/$arch\n' | sudo tee -a /etc/pacman.conf
+sudo pacman -Syy</code></pre>
             <p class="card-note">
-              Append to <code>/etc/pacman.conf</code>, then run
-              <code>sudo pacman -Syy</code>.
+              This imports Matt&rsquo;s package signing key, locally trusts it, enables the repo, then refreshes pacman.
             </p>
           </aside>
         </section>

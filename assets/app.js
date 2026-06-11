@@ -4,7 +4,7 @@ const REPO = {
   server: "https://repo.matthewyjiang.com/$arch",
 };
 
-const PACMAN_CONFIG = `curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -\nsudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14\n\n[mjiang-extras]\nSigLevel = Required\nServer = https://repo.matthewyjiang.com/$arch`;
+const PACMAN_CONFIG = `curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -\nsudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14\nprintf '\\n[mjiang-extras]\\nSigLevel = Required\\nServer = https://repo.matthewyjiang.com/$arch\\n' | sudo tee -a /etc/pacman.conf\nsudo pacman -Syy`;
 
 const ICONS = {
   copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></svg>`,

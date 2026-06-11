@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   sign:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     container: archlinux:latest
 

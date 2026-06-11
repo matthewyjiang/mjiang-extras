@@ -6,6 +6,11 @@ const REPO = {
 
 const PACMAN_CONFIG = `[mjiang-extras]\nSigLevel = Never\nServer = https://repo.matthewyjiang.com/$arch`;
 
+const ICONS = {
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>`,
+};
+
 const state = {
   packages: [],
   filtered: [],
@@ -233,16 +238,19 @@ function renderPackages() {
   }
 
   els.list.innerHTML = state.filtered
-    .map((pkg) => {
+    .map((pkg, i) => {
       const isActive = pkg.name === state.selectedName;
+      const index = String(i + 1).padStart(2, "0");
+      const meta = [pkg.version, pkg.arch || "unknown", formatBytes(pkg.csize)]
+        .filter(Boolean)
+        .join("  ·  ");
       return `
         <button class="package-card ${isActive ? "is-active" : ""}" type="button" data-package="${escapeAttr(pkg.name)}">
-          <strong>${escapeHtml(pkg.name)}</strong>
-          <p>${escapeHtml(pkg.description || "No description provided.")}</p>
-          <span class="pill-row">
-            <span class="pill">${escapeHtml(pkg.version)}</span>
-            <span class="pill green">${escapeHtml(pkg.arch || "unknown")}</span>
-            <span class="pill">${formatBytes(pkg.csize)}</span>
+          <span class="pkg-index">${index}</span>
+          <span class="pkg-main">
+            <span class="pkg-name">${escapeHtml(pkg.name)}</span>
+            <span class="pkg-desc">${escapeHtml(pkg.description || "No description provided.")}</span>
+            <span class="pkg-meta">${escapeHtml(meta)}</span>
           </span>
         </button>
       `;
@@ -282,12 +290,12 @@ function renderDetails(pkg) {
         <h3>${escapeHtml(pkg.name)}</h3>
         <p>${escapeHtml(pkg.description || "No description provided.")}</p>
       </div>
-      ${pkg.downloadUrl ? `<a class="button secondary" href="${escapeAttr(pkg.downloadUrl)}">Download</a>` : ""}
+      ${pkg.downloadUrl ? `<a class="icon-button" href="${escapeAttr(pkg.downloadUrl)}" download aria-label="Download package">${ICONS.download}</a>` : ""}
     </div>
 
     <div class="command-box">
       <code>${escapeHtml(installCommand)}</code>
-      <button class="inline-copy" type="button" data-copy-install>Copy</button>
+      <button class="icon-button" type="button" data-copy-install aria-label="Copy install command">${ICONS.copy}</button>
     </div>
 
     <div class="meta-grid">
@@ -310,7 +318,7 @@ function renderDetails(pkg) {
     <div class="section-block">
       <div class="meta-row">
         <h4>SHA-256</h4>
-        ${pkg.sha256sum ? `<button class="inline-copy" type="button" data-copy-sha>Copy</button>` : ""}
+        ${pkg.sha256sum ? `<button class="icon-button" type="button" data-copy-sha aria-label="Copy SHA-256 checksum">${ICONS.copy}</button>` : ""}
       </div>
       <code>${escapeHtml(pkg.sha256sum || "—")}</code>
     </div>

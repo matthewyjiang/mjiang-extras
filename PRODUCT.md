@@ -42,7 +42,11 @@ sharp CLI tool — not a marketing site. Three words: exact, calm, legible.
    interaction and selection only.
 4. **Borders, not chrome.** Separation comes from hairlines and spacing, not
    shadows, blur, or cards-within-cards.
-5. **Fast and static.** Zero web fonts, no dependencies, no load choreography.
+5. **Refined, not noisy.** A committed editorial-technical voice — an elegant
+   serif for display against monospace for everything technical — carried by
+   typography, whitespace, and hairline rules rather than boxes, color, or
+   decoration. Fonts load performantly (`preconnect` + `display=swap`); no load
+   choreography.
 
 ## Accessibility & Inclusion
 

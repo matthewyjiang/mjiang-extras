@@ -1,0 +1,66 @@
+name: sign-repo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "x86_64/*.pkg.tar.zst"
+      - "scripts/sign-repo.sh"
+      - ".github/workflows/sign-repo.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sign-repo
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - name: Install tools
+        run: pacman -Sy --noconfirm git gnupg pacman-contrib
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Import signing key
+        env:
+          PACKAGE_SIGNING_KEY: ${{ secrets.PACKAGE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$PACKAGE_SIGNING_KEY"
+          install -m 700 -d ~/.gnupg
+          printf '%s\n' "$PACKAGE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --list-secret-keys --keyid-format LONG
+
+      - name: Sign packages and repository database
+        env:
+          GPG_KEY_ID: ${{ secrets.PACKAGE_SIGNING_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$GPG_KEY_ID"
+          ./scripts/sign-repo.sh --gpg-key "$GPG_KEY_ID"
+
+      - name: Commit signatures
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add x86_64/
+          if git diff --cached --quiet; then
+            echo "No signature changes to commit."
+            exit 0
+          fi
+          git commit -m "Sign package repository"
+          git push

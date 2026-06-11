@@ -108,6 +108,9 @@ jobs:
   copies the new archives.
 - Packages with `arch=('any')` still publish into `x86_64/` because this repo is
   served at `https://repo.matthewyjiang.com/$arch`.
+- The `mjiang-extras` repo signs packages centrally. After a package repo pushes
+  new `*.pkg.tar.zst` files, the `sign-repo` workflow creates/refreshes package
+  signatures and signed repo metadata. See [Repository signing](signing.md).
 - If builds require AUR dependencies or custom system packages, add them to the
   `Install build tools` step before `makepkg`.
 - For manual publishing from a local checkout, build packages, clone this repo,

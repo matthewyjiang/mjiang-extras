@@ -18,10 +18,10 @@ jobs:
 
       - name: Rebuild repository database
         run: |
-          cd "$GITHUB_WORKSPACE"
+          cd /__w/mjiang-extras/mjiang-extras
           repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
 
       - name: Verify generated metadata is committed
         run: |
-          cd "$GITHUB_WORKSPACE"
-          git diff --exit-code -- x86_64/
+          cd /__w/mjiang-extras/mjiang-extras
+          /usr/sbin/git diff --exit-code -- x86_64/

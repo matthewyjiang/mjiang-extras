@@ -65,8 +65,11 @@
                 </svg>
               </button>
             </div>
-            <pre><code>[mjiang-extras]
-SigLevel = Never
+            <pre><code>curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -
+sudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14
+
+[mjiang-extras]
+SigLevel = Required
 Server = https://repo.matthewyjiang.com/$arch</code></pre>
             <p class="card-note">
               Append to <code>/etc/pacman.conf</code>, then run

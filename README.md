@@ -1,5 +1,7 @@
 # mjiang-extras
 
+Browse the package database at <https://repo.matthewyjiang.com/>.
+
 Add this repo to your system:
 ```bash
 echo -e '\n[mjiang-extras]\nSigLevel = Never\nServer = https://repo.matthewyjiang.com/$arch\n' | sudo tee -a /etc/pacman.conf && sudo pacman -Syy
@@ -8,7 +10,7 @@ echo -e '\n[mjiang-extras]\nSigLevel = Never\nServer = https://repo.matthewyjian
 ## List of packages and versions:
 - git-credential-1password-git r37.3c31135-1
 - git-credential-1password-git-debug r37.3c31135-1
-- razer-coolingpad-linux 0.1.0-1 (`any`)
+- razer-coolingpad-linux 0.2.0-1 (`any`)
 
 ## Publishing packages
 

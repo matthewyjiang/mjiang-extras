@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>mjiang-extras package database</title>
+    <meta
+      name="description"
+      content="Browse packages in the mjiang-extras Arch Linux package repository."
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="hero">
+        <nav class="topbar" aria-label="Repository links">
+          <a class="brand" href="/" aria-label="mjiang-extras home">
+            <span class="brand-mark">mx</span>
+            <span>mjiang-extras</span>
+          </a>
+          <div class="nav-links">
+            <a href="x86_64/mjiang-extras.db.tar.gz">Database</a>
+            <a href="x86_64/mjiang-extras.files.tar.gz">Files</a>
+            <a href="https://github.com/matthewyjiang/mjiang-extras">GitHub</a>
+          </div>
+        </nav>
+
+        <section class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Arch Linux package repository</p>
+            <h1>A clean package database for personal extras.</h1>
+            <p class="hero-text">
+              Search packages, inspect dependencies and files, then copy a pacman
+              install command when you find what you need.
+            </p>
+            <div class="hero-actions">
+              <a class="button primary" href="#packages">Browse packages</a>
+              <button class="button secondary" type="button" data-copy-config>
+                Copy pacman config
+              </button>
+            </div>
+          </div>
+
+          <aside class="install-card" aria-label="Repository setup">
+            <div class="card-heading">
+              <span>Enable the repo</span>
+              <button type="button" data-copy-config>Copy</button>
+            </div>
+            <pre><code>[mjiang-extras]
+SigLevel = Never
+Server = https://repo.matthewyjiang.com/$arch</code></pre>
+            <p>
+              Append this block to <code>/etc/pacman.conf</code>, then run
+              <code>sudo pacman -Syy</code>.
+            </p>
+          </aside>
+        </section>
+      </header>
+
+      <main>
+        <section class="stats-grid" aria-label="Repository summary">
+          <article class="stat-card">
+            <span class="stat-label">Packages</span>
+            <strong id="stat-packages">—</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Architectures</span>
+            <strong id="stat-arches">—</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Compressed size</span>
+            <strong id="stat-size">—</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Latest build</span>
+            <strong id="stat-updated">—</strong>
+          </article>
+        </section>
+
+        <section class="browser" id="packages">
+          <div class="browser-header">
+            <div>
+              <p class="eyebrow">Package database</p>
+              <h2>Packages</h2>
+            </div>
+            <div class="search-wrap">
+              <label class="sr-only" for="package-search">Search packages</label>
+              <input
+                id="package-search"
+                type="search"
+                placeholder="Search by name, description, dependency…"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="status" id="load-status" role="status">Loading repository database…</div>
+
+          <div class="package-layout" hidden>
+            <div class="package-list" id="package-list" aria-label="Package list"></div>
+            <article class="package-details" id="package-details" aria-live="polite"></article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="assets/app.js" defer></script>
+  </body>
+</html>

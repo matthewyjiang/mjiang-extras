@@ -1,0 +1,153 @@
+{
+  "repository": {
+    "name": "mjiang-extras",
+    "archPath": "x86_64",
+    "server": "https://repo.matthewyjiang.com/$arch",
+    "source": "x86_64/mjiang-extras.files.tar.gz",
+    "generatedAt": "2026-06-11T22:08:09Z"
+  },
+  "packages": [
+    {
+      "filename": "git-credential-1password-git-r37.3c31135-1-x86_64.pkg.tar.zst",
+      "name": "git-credential-1password-git",
+      "base": "git-credential-1password-git",
+      "version": "r37.3c31135-1",
+      "description": "Git credential helper using 1Password CLI (op)",
+      "csize": 1084288,
+      "isize": 2528758,
+      "sha256sum": "abe72af9486748601923ab065b58c13b849be9002e51a5035bfc90aaba314b80",
+      "url": "https://github.com/matthewyjiang/git-credential-1password",
+      "licenses": [
+        "MIT"
+      ],
+      "arch": "x86_64",
+      "buildDate": 1758927409,
+      "packager": "Unknown Packager",
+      "depends": [
+        "glibc"
+      ],
+      "optdepends": [
+        "1password-cli: 1Password command-line tool (op) required at runtime",
+        "git: to use the helper with Git"
+      ],
+      "makedepends": [
+        "git",
+        "go"
+      ],
+      "conflicts": [
+        "git-credential-1password"
+      ],
+      "provides": [
+        "git-credential-1password"
+      ],
+      "files": [
+        "usr/",
+        "usr/bin/",
+        "usr/bin/git-credential-1password",
+        "usr/share/",
+        "usr/share/doc/",
+        "usr/share/doc/git-credential-1password-git/",
+        "usr/share/doc/git-credential-1password-git/README.md",
+        "usr/share/licenses/",
+        "usr/share/licenses/git-credential-1password-git/",
+        "usr/share/licenses/git-credential-1password-git/LICENSE"
+      ],
+      "downloadUrl": "x86_64/git-credential-1password-git-r37.3c31135-1-x86_64.pkg.tar.zst"
+    },
+    {
+      "filename": "git-credential-1password-git-debug-r37.3c31135-1-x86_64.pkg.tar.zst",
+      "name": "git-credential-1password-git-debug",
+      "base": "git-credential-1password-git",
+      "version": "r37.3c31135-1",
+      "description": "Detached debugging symbols for git-credential-1password-git",
+      "csize": 14053,
+      "isize": 6320,
+      "sha256sum": "23480c679234c3067855553a7fa738b6cfd305c0a66ab2b24ef79da00defed4e",
+      "url": "https://github.com/matthewyjiang/git-credential-1password",
+      "licenses": [
+        "MIT"
+      ],
+      "arch": "x86_64",
+      "buildDate": 1758927409,
+      "packager": "Unknown Packager",
+      "depends": [],
+      "optdepends": [],
+      "makedepends": [
+        "git",
+        "go"
+      ],
+      "conflicts": [],
+      "provides": [],
+      "files": [
+        "usr/",
+        "usr/lib/",
+        "usr/lib/debug/",
+        "usr/lib/debug/.build-id/",
+        "usr/lib/debug/.build-id/d6/",
+        "usr/lib/debug/.build-id/d6/53053825ec4647a686b2270df42787137ee415",
+        "usr/lib/debug/.build-id/d6/53053825ec4647a686b2270df42787137ee415.debug",
+        "usr/lib/debug/usr/",
+        "usr/lib/debug/usr/bin/",
+        "usr/lib/debug/usr/bin/git-credential-1password.debug",
+        "usr/src/",
+        "usr/src/debug/",
+        "usr/src/debug/git-credential-1password-git/"
+      ],
+      "downloadUrl": "x86_64/git-credential-1password-git-debug-r37.3c31135-1-x86_64.pkg.tar.zst"
+    },
+    {
+      "filename": "razer-coolingpad-linux-0.2.0-1-any.pkg.tar.zst",
+      "name": "razer-coolingpad-linux",
+      "base": "razer-coolingpad-linux",
+      "version": "0.2.0-1",
+      "description": "Fan curve controller for the Razer Laptop Cooling Pad",
+      "csize": 21756,
+      "isize": 26182,
+      "sha256sum": "04c484cbe1d74cbe0b767939219e092e3897d2ec3725355ae255cd5b1f57ccaf",
+      "url": "https://github.com/Nox1con/razer-coolingpad-linux",
+      "licenses": [
+        "MIT"
+      ],
+      "arch": "any",
+      "buildDate": 1774375890,
+      "packager": "Unknown Packager",
+      "depends": [
+        "python",
+        "python-hidapi",
+        "systemd"
+      ],
+      "optdepends": [],
+      "makedepends": [],
+      "conflicts": [],
+      "provides": [],
+      "files": [
+        "etc/",
+        "etc/razer-coolingpad-linux/",
+        "etc/razer-coolingpad-linux/config.json",
+        "usr/",
+        "usr/bin/",
+        "usr/bin/razer-coolingpad",
+        "usr/lib/",
+        "usr/lib/systemd/",
+        "usr/lib/systemd/system/",
+        "usr/lib/systemd/system/razer-coolingpad.service",
+        "usr/lib/udev/",
+        "usr/lib/udev/rules.d/",
+        "usr/lib/udev/rules.d/99-razer-coolingpad.rules",
+        "usr/share/",
+        "usr/share/doc/",
+        "usr/share/doc/razer-coolingpad-linux/",
+        "usr/share/doc/razer-coolingpad-linux/README.md",
+        "usr/share/licenses/",
+        "usr/share/licenses/razer-coolingpad-linux/",
+        "usr/share/licenses/razer-coolingpad-linux/LICENSE",
+        "usr/share/razer-coolingpad-linux/",
+        "usr/share/razer-coolingpad-linux/curves/",
+        "usr/share/razer-coolingpad-linux/curves/balanced.json",
+        "usr/share/razer-coolingpad-linux/curves/performance.json",
+        "usr/share/razer-coolingpad-linux/curves/silent.json"
+      ],
+      "downloadUrl": "x86_64/razer-coolingpad-linux-0.2.0-1-any.pkg.tar.zst"
+    }
+  ]
+}

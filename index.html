@@ -13,7 +13,7 @@
   </head>
   <body>
     <div class="site-shell">
-      <header class="hero">
+      <header>
         <nav class="topbar" aria-label="Repository links">
           <a class="brand" href="/" aria-label="mjiang-extras home">
             <span class="brand-mark">mx</span>
@@ -28,11 +28,10 @@
 
         <section class="hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow">Arch Linux package repository</p>
-            <h1>A clean package database for personal extras.</h1>
+            <h1>An Arch package repository for personal extras.</h1>
             <p class="hero-text">
-              Search packages, inspect dependencies and files, then copy a pacman
-              install command when you find what you need.
+              Search the database, inspect dependencies and files, then copy a
+              pacman install command when you find what you need.
             </p>
             <div class="hero-actions">
               <a class="button primary" href="#packages">Browse packages</a>
@@ -50,7 +49,7 @@
             <pre><code>[mjiang-extras]
 SigLevel = Never
 Server = https://repo.matthewyjiang.com/$arch</code></pre>
-            <p>
+            <p class="card-note">
               Append this block to <code>/etc/pacman.conf</code>, then run
               <code>sudo pacman -Syy</code>.
             </p>
@@ -80,10 +79,7 @@ Server = https://repo.matthewyjiang.com/$arch</code></pre>
 
         <section class="browser" id="packages">
           <div class="browser-header">
-            <div>
-              <p class="eyebrow">Package database</p>
-              <h2>Packages</h2>
-            </div>
+            <h2>Packages</h2>
             <div class="search-wrap">
               <label class="sr-only" for="package-search">Search packages</label>
               <input

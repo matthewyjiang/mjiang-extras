@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest
 
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
     steps:
       - name: Install tools
         run: pacman -Sy --noconfirm git pacman-contrib

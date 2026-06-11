@@ -24,4 +24,5 @@ jobs:
       - name: Verify generated metadata is committed
         run: |
           cd /__w/mjiang-extras/mjiang-extras
-          /usr/sbin/git diff --exit-code -- x86_64/
+          test -d .git
+          /usr/sbin/git --git-dir=.git --work-tree=. diff --exit-code -- x86_64/

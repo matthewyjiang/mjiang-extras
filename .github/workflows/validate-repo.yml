@@ -11,18 +11,29 @@ jobs:
 
     steps:
       - name: Install tools
-        run: pacman -Sy --noconfirm git pacman-contrib
+        run: pacman -Sy --noconfirm git pacman-contrib diffutils
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Rebuild repository database
+      - name: Validate repository metadata
         run: |
+          set -eu
           cd /__w/mjiang-extras/mjiang-extras
+
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+
+          cp x86_64/mjiang-extras.db.tar.gz "$tmp/original.db.tar.gz"
+          cp x86_64/mjiang-extras.files.tar.gz "$tmp/original.files.tar.gz"
+
           repo-add x86_64/mjiang-extras.db.tar.gz x86_64/*.pkg.tar.zst
 
-      - name: Verify generated metadata is committed
-        run: |
-          cd /__w/mjiang-extras/mjiang-extras
-          test -d .git
-          /usr/sbin/git --git-dir=.git --work-tree=. diff --exit-code -- x86_64/
+          mkdir -p "$tmp/original-db" "$tmp/rebuilt-db" "$tmp/original-files" "$tmp/rebuilt-files"
+          tar -xzf "$tmp/original.db.tar.gz" -C "$tmp/original-db"
+          tar -xzf x86_64/mjiang-extras.db.tar.gz -C "$tmp/rebuilt-db"
+          tar -xzf "$tmp/original.files.tar.gz" -C "$tmp/original-files"
+          tar -xzf x86_64/mjiang-extras.files.tar.gz -C "$tmp/rebuilt-files"
+
+          diff -ru "$tmp/original-db" "$tmp/rebuilt-db"
+          diff -ru "$tmp/original-files" "$tmp/rebuilt-files"

@@ -60,10 +60,11 @@
                 <i data-lucide="copy" aria-hidden="true"></i>
               </button>
             </div>
-            <pre><code>curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -
-sudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14
-printf '\n[mjiang-extras]\nSigLevel = Required\nServer = https://repo.matthewyjiang.com/$arch\n' | sudo tee -a /etc/pacman.conf
-sudo pacman -Syy</code></pre>
+
+            <pre><code>curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add - &amp;&amp; sudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14
+
+printf '\n[mjiang-extras]\nSigLevel = Required\nServer = https://repo.matthewyjiang.com/$arch\n' | sudo tee -a /etc/pacman.conf &amp;&amp; sudo pacman -Syy</code></pre>
+
             <p class="card-note">
               This imports Matt&rsquo;s package signing key, locally trusts it, enables the repo, then refreshes pacman.
             </p>
@@ -92,20 +93,19 @@ sudo pacman -Syy</code></pre>
         <section class="browser" id="packages">
           <div class="browser-header">
             <h2>The index</h2>
-            <div class="browser-controls">
-              <button class="button ghost refresh-button" type="button" data-refresh-packages>
-                <i data-lucide="refresh-cw" aria-hidden="true"></i>
-                <span>Refresh registry</span>
-              </button>
+            <div class="browser-controls controls-short-copy">
               <div class="search-wrap">
                 <label class="sr-only" for="package-search">Search packages</label>
                 <input
                   id="package-search"
                   type="search"
-                  placeholder="Search name, description, dependency…"
+                  placeholder="Search packages, deps, files…"
                   autocomplete="off"
                 />
               </div>
+              <button class="button ghost refresh-button" type="button" data-refresh-packages aria-label="Refresh registry" title="Refresh registry">
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+              </button>
             </div>
           </div>
 
@@ -130,5 +130,8 @@ sudo pacman -Syy</code></pre>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
     <script src="assets/app.js?v=20260611-icons" defer></script>
-  </body>
+  <!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js"></script>
+<!-- impeccable-live-end -->
+</body>
 </html>

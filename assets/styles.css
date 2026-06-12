@@ -431,9 +431,53 @@ pre,
   padding: 0 0.9rem;
 }
 
-.refresh-button svg {
+.refresh-button svg,
+.refresh-button i {
   width: 16px;
   height: 16px;
+}
+
+.controls-search-and-icon {
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.controls-search-and-icon .search-wrap {
+  width: min(372px, 100%);
+}
+
+.controls-search-and-icon .refresh-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--ink-2);
+  border-color: var(--line-2);
+}
+
+.controls-search-and-icon .refresh-button:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: var(--muted);
+}
+
+.controls-short-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  width: min(410px, 100%);
+  gap: 0.5rem;
+}
+
+.controls-short-copy .search-wrap {
+  width: auto;
+}
+
+.controls-short-copy #package-search {
+  font-size: 0.9rem;
+}
+
+.controls-short-copy .refresh-button {
+  width: 42px;
+  padding: 0;
 }
 
 .refresh-button[aria-busy="true"] svg {

@@ -7,8 +7,8 @@ const REPO = {
 const PACMAN_CONFIG = `curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -\nsudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14\nprintf '\\n[mjiang-extras]\\nSigLevel = Required\\nServer = https://repo.matthewyjiang.com/$arch\\n' | sudo tee -a /etc/pacman.conf\nsudo pacman -Syy`;
 
 const ICONS = {
-  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></svg>`,
-  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>`,
+  copy: `<i data-lucide="copy" aria-hidden="true"></i>`,
+  download: `<i data-lucide="download" aria-hidden="true"></i>`,
 };
 
 const REFRESH_SUCCESS_MESSAGE = "Package registry refreshed";
@@ -36,6 +36,8 @@ const els = {
 init();
 
 async function init() {
+  renderIcons();
+
   document.querySelectorAll("[data-copy-config]").forEach((button) => {
     button.addEventListener("click", () => copyText(PACMAN_CONFIG, "Copied pacman config"));
   });
@@ -297,6 +299,7 @@ function renderPackages() {
   });
 
   renderDetails(selectedPackage());
+  renderIcons();
 }
 
 function selectedPackage() {
@@ -366,6 +369,15 @@ function renderDetails(pkg) {
 
   els.details.querySelector("[data-copy-sha]")?.addEventListener("click", () => {
     copyText(pkg.sha256sum, "Copied checksum");
+  });
+}
+
+function renderIcons() {
+  window.lucide?.createIcons({
+    attrs: {
+      "stroke-width": 1.8,
+      "aria-hidden": "true",
+    },
   });
 }
 

@@ -11,6 +11,8 @@ const ICONS = {
   download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>`,
 };
 
+const REFRESH_SUCCESS_MESSAGE = "Package registry refreshed";
+
 const state = {
   packages: [],
   filtered: [],
@@ -24,6 +26,7 @@ const els = {
   details: document.querySelector("#package-details"),
   search: document.querySelector("#package-search"),
   toast: document.querySelector("#toast"),
+  refresh: document.querySelector("[data-refresh-packages]"),
   statPackages: document.querySelector("#stat-packages"),
   statArches: document.querySelector("#stat-arches"),
   statSize: document.querySelector("#stat-size"),
@@ -42,32 +45,54 @@ async function init() {
     renderPackages();
   });
 
+  els.refresh.addEventListener("click", () => refreshPackages({ force: true }));
+
+  await refreshPackages();
+}
+
+async function refreshPackages({ force = false } = {}) {
+  setRefreshing(true);
+  els.status.hidden = false;
+  els.status.textContent = force ? "Refreshing repository database…" : "Loading repository database…";
+
   try {
-    const packages = await loadPackages();
+    const packages = await loadPackages({ force });
     state.packages = packages
       .filter((pkg) => !isDebugPackage(pkg))
       .sort((a, b) => a.name.localeCompare(b.name));
-    state.filtered = [...state.packages];
-    state.selectedName = packageNameFromHash() || state.packages[0]?.name || null;
+    state.selectedName = state.packages.some((pkg) => pkg.name === state.selectedName)
+      ? state.selectedName
+      : packageNameFromHash() || state.packages[0]?.name || null;
+    filterPackages(els.search.value);
 
     renderStats();
     renderPackages();
     els.status.hidden = true;
     els.layout.hidden = false;
+    if (force) showToast(REFRESH_SUCCESS_MESSAGE);
   } catch (error) {
     console.error(error);
     els.status.textContent = `Could not load the package database: ${error.message}`;
+  } finally {
+    setRefreshing(false);
   }
 }
 
-async function loadPackages() {
+function setRefreshing(isRefreshing) {
+  els.refresh.disabled = isRefreshing;
+  els.refresh.setAttribute("aria-busy", String(isRefreshing));
+}
+
+async function loadPackages({ force = false } = {}) {
+  const cacheBust = force ? `?t=${Date.now()}` : "";
+
   try {
     if (!("DecompressionStream" in window)) {
       throw new Error("This browser cannot read gzip streams directly.");
     }
 
-    const dbUrl = `${REPO.archPath}/${REPO.name}.files.tar.gz`;
-    const response = await fetch(dbUrl);
+    const dbUrl = `${REPO.archPath}/${REPO.name}.files.tar.gz${cacheBust}`;
+    const response = await fetch(dbUrl, { cache: force ? "no-store" : "default" });
     if (!response.ok) throw new Error(`Repository database returned ${response.status}`);
 
     const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
@@ -79,7 +104,7 @@ async function loadPackages() {
     return packages;
   } catch (error) {
     console.warn("Falling back to packages.json", error);
-    const response = await fetch("packages.json");
+    const response = await fetch(`packages.json${cacheBust}`, { cache: force ? "no-store" : "default" });
     if (!response.ok) throw error;
     const fallback = await response.json();
     return fallback.packages || [];

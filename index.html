@@ -95,14 +95,25 @@ sudo pacman -Syy</code></pre>
         <section class="browser" id="packages">
           <div class="browser-header">
             <h2>The index</h2>
-            <div class="search-wrap">
-              <label class="sr-only" for="package-search">Search packages</label>
-              <input
-                id="package-search"
-                type="search"
-                placeholder="Search name, description, dependency…"
-                autocomplete="off"
-              />
+            <div class="browser-controls">
+              <button class="button ghost refresh-button" type="button" data-refresh-packages>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12a9 9 0 0 1-15.36 6.36" />
+                  <path d="M3 12A9 9 0 0 1 18.36 5.64" />
+                  <path d="M21 5v7h-7" />
+                  <path d="M3 19v-7h7" />
+                </svg>
+                <span>Refresh registry</span>
+              </button>
+              <div class="search-wrap">
+                <label class="sr-only" for="package-search">Search packages</label>
+                <input
+                  id="package-search"
+                  type="search"
+                  placeholder="Search name, description, dependency…"
+                  autocomplete="off"
+                />
+              </div>
             </div>
           </div>
 

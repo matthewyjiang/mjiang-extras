@@ -1,0 +1,40 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs and local runtime output
+*.log
+*.pid
+/tmp/
+tmp/
+
+# Node / frontend tooling caches
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.bun/
+dist/
+build/
+.cache/
+.parcel-cache/
+.vite/
+
+# Python helpers / local scripts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Impeccable live-mode runtime state
+# Keep .impeccable/live/config.json tracked; ignore per-session/server state.
+.impeccable/live/server.json
+.impeccable/live/sessions/
+
+# Local environment files
+.env
+.env.*
+!.env.example

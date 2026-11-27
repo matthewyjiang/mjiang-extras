@@ -97,5 +97,5 @@ jobs:
           sed -e "s|^baseurl=.*|baseurl=file://$dir|" \
               -e "s|^gpgkey=.*|gpgkey=file://$PWD/mjiang-extras.gpg|" \
               mjiang-extras.repo > /etc/yum.repos.d/mjiang-extras.repo
-          dnf -y --disablerepo='*' --enablerepo=mjiang-extras makecache
+          dnf -y --setopt=skip_if_unavailable=False --disablerepo='*' --enablerepo=mjiang-extras makecache
           dnf --disablerepo='*' --enablerepo=mjiang-extras repoquery --available

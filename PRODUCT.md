@@ -6,17 +6,21 @@ product
 
 ## Users
 
-Linux users (primarily Arch) who want to install packages from the personal
-`mjiang-extras` repository. They arrive in a task: enable the repo in
-`pacman.conf`, find a specific package, inspect its version / dependencies /
-files, and copy a `pacman -S` install command. They are command-line fluent and
-read monospaced identifiers (package names, versions, checksums, paths) all day.
+Linux users on Arch or Fedora who want to install packages from the personal
+`mjiang-extras` repository. They arrive in a task: enable the repo (in
+`pacman.conf`, or as a dnf `.repo` file), find a specific package, inspect its
+version / dependencies / files, and copy a `pacman -S` or `dnf install`
+command. They are command-line fluent and read monospaced identifiers (package
+names, versions, checksums, paths) all day.
 
 ## Product Purpose
 
-A static, single-page browser for one Arch Linux package repository. It reads
-the repo's `.files` database (with a `packages.json` fallback), lists every
-package, and surfaces the metadata needed to decide on and perform an install.
+A static, single-page browser for one package repository published for two
+distros. An Arch / Fedora switch (persisted as `?distro=fedora`) picks the data
+source: for Arch it reads the repo's `.files` database (with a `packages.json`
+fallback); for Fedora it reads the createrepo_c metadata (`repomd.xml` →
+gzipped `primary` + `filelists`). Either way it lists every package and
+surfaces the metadata needed to decide on and perform an install.
 Success: a visitor enables the repo and finds what to install without leaving
 the page or guessing.
 

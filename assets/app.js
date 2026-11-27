@@ -1,10 +1,43 @@
+const SITE = "https://repo.matthewyjiang.com";
+const SIGNING_KEY = "8269F3B4ED361F6BE6C0233DD113C94146264D14";
+
 const REPO = {
   name: "mjiang-extras",
   archPath: "x86_64",
   server: "https://repo.matthewyjiang.com/$arch",
 };
 
+// One createrepo_c tree serves every supported Fedora release (x86_64 + noarch RPMs).
+const FEDORA_PATH = "fedora/x86_64";
+
 const PACMAN_CONFIG = `curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add - && sudo pacman-key --lsign-key 8269F3B4ED361F6BE6C0233DD113C94146264D14\n\nprintf '\\n[mjiang-extras]\\nSigLevel = Required\\nServer = https://repo.matthewyjiang.com/$arch\\n' | sudo tee -a /etc/pacman.conf && sudo pacman -Syy`;
+
+const DNF_SETUP = `sudo dnf config-manager addrepo --from-repofile=${SITE}/mjiang-extras.repo`;
+
+// Everything that differs per distro. `load` resolves to normalized packages;
+// an empty array means the repo has nothing published yet.
+const DISTROS = {
+  arch: {
+    label: "Arch",
+    setup: PACMAN_CONFIG,
+    setupNote: "This imports Matt&rsquo;s package signing key, locally trusts it, enables the repo, then refreshes pacman.",
+    copyMessage: "Copied pacman config",
+    installCommand: (name) => `sudo pacman -S ${name}`,
+    baseLabel: "Package base",
+    load: loadArchPackages,
+  },
+  fedora: {
+    label: "Fedora",
+    setup: DNF_SETUP,
+    setupNote: `Adds the repo to dnf on Fedora 41+. Your first install asks you to import Matt&rsquo;s signing key; its fingerprint should read <code>${SIGNING_KEY}</code>.`,
+    copyMessage: "Copied dnf setup",
+    installCommand: (name) => `sudo dnf install ${name}`,
+    baseLabel: "Source RPM",
+    load: loadFedoraPackages,
+  },
+};
+
+const DEFAULT_DISTRO = "arch";
 
 const ICONS = {
   copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`,
@@ -14,12 +47,20 @@ const ICONS = {
 const REFRESH_SUCCESS_MESSAGE = "Package registry refreshed";
 
 const state = {
+  distro: DEFAULT_DISTRO,
+  // Distro whose packages are currently rendered; differs from `distro` mid-switch.
+  shownDistro: null,
+  // Bumped per load so a slow response can't overwrite a newer distro switch.
+  loadId: 0,
   packages: [],
   filtered: [],
   selectedName: null,
 };
 
 const els = {
+  distroInputs: document.querySelectorAll('input[name="distro"]'),
+  setupCode: document.querySelector("#setup-code"),
+  setupNote: document.querySelector("#setup-note"),
   status: document.querySelector("#load-status"),
   layout: document.querySelector(".package-layout"),
   list: document.querySelector("#package-list"),
@@ -36,8 +77,24 @@ const els = {
 init();
 
 async function init() {
+  state.distro = distroFromUrl();
+  renderSetup();
+
+  els.distroInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      if (!input.checked) return;
+      state.distro = input.value;
+      updateUrl();
+      renderSetup();
+      refreshPackages();
+    });
+  });
+
   document.querySelectorAll("[data-copy-config]").forEach((button) => {
-    button.addEventListener("click", () => copyText(PACMAN_CONFIG, "Copied pacman config"));
+    button.addEventListener("click", () => {
+      const distro = DISTROS[state.distro];
+      copyText(distro.setup, distro.copyMessage);
+    });
   });
 
   els.search.addEventListener("input", () => {
@@ -51,31 +108,79 @@ async function init() {
 }
 
 async function refreshPackages({ force = false } = {}) {
+  const distro = DISTROS[state.distro];
+  const loadId = ++state.loadId;
+  const isStale = () => loadId !== state.loadId;
+
   setRefreshing(true);
   els.status.hidden = false;
   els.status.textContent = force ? "Refreshing repository database…" : "Loading repository database…";
+  if (state.shownDistro !== state.distro) {
+    // Don't leave the previous distro's packages on screen under the new setup snippet.
+    els.layout.hidden = true;
+    state.packages = [];
+    [els.statPackages, els.statArches, els.statSize, els.statUpdated].forEach((el) => {
+      el.textContent = "—";
+    });
+  }
 
   try {
-    const packages = await loadPackages({ force });
+    const packages = await distro.load({ force });
+    if (isStale()) return;
+    state.shownDistro = state.distro;
     state.packages = packages
       .filter((pkg) => !isDebugPackage(pkg))
       .sort((a, b) => a.name.localeCompare(b.name));
+    renderStats();
+
+    if (state.packages.length === 0) {
+      els.layout.hidden = true;
+      els.status.textContent = `No ${distro.label} packages yet. This list fills in once the first build is published.`;
+      return;
+    }
+
     state.selectedName = state.packages.some((pkg) => pkg.name === state.selectedName)
       ? state.selectedName
       : packageNameFromHash() || state.packages[0]?.name || null;
     filterPackages(els.search.value);
 
-    renderStats();
     renderPackages();
     els.status.hidden = true;
     els.layout.hidden = false;
     if (force) showToast(REFRESH_SUCCESS_MESSAGE);
   } catch (error) {
+    if (isStale()) return;
     console.error(error);
     els.status.textContent = `Could not load the package database: ${error.message}`;
   } finally {
-    setRefreshing(false);
+    if (!isStale()) setRefreshing(false);
   }
+}
+
+// Reflects the chosen distro in the setup card, the radio group, and the list label.
+function renderSetup() {
+  const distro = DISTROS[state.distro];
+  els.distroInputs.forEach((input) => {
+    input.checked = input.value === state.distro;
+  });
+  els.setupCode.textContent = distro.setup;
+  els.setupNote.innerHTML = distro.setupNote;
+  els.list.setAttribute("aria-label", `${distro.label} packages`);
+}
+
+// `?distro=fedora` selects Fedora; anything else (or nothing) is Arch.
+function distroFromUrl() {
+  const value = new URLSearchParams(window.location.search).get("distro");
+  return value && Object.hasOwn(DISTROS, value) ? value : DEFAULT_DISTRO;
+}
+
+// Writes the distro (query) and optionally a package (hash) without adding history entries.
+function updateUrl({ packageName } = {}) {
+  const url = new URL(window.location.href);
+  if (state.distro === DEFAULT_DISTRO) url.searchParams.delete("distro");
+  else url.searchParams.set("distro", state.distro);
+  if (packageName !== undefined) url.hash = encodeURIComponent(packageName);
+  window.history.replaceState(null, "", url);
 }
 
 function setRefreshing(isRefreshing) {
@@ -83,7 +188,8 @@ function setRefreshing(isRefreshing) {
   els.refresh.setAttribute("aria-busy", String(isRefreshing));
 }
 
-async function loadPackages({ force = false } = {}) {
+// Reads the pacman `.files` database, falling back to the generated packages.json.
+async function loadArchPackages({ force = false } = {}) {
   const cacheBust = force ? `?t=${Date.now()}` : "";
 
   try {
@@ -166,7 +272,7 @@ function packagesFromTarEntries(entries) {
     .map((record) => {
       const desc = parseSections(record.desc || "");
       const files = parseSections(record.files || "").FILES || [];
-      return normalizePackage(desc, files);
+      return normalizeArchPackage(desc, files);
     })
     .filter((pkg) => pkg.name && pkg.version);
 }
@@ -188,7 +294,7 @@ function parseSections(text) {
   return sections;
 }
 
-function normalizePackage(desc, files) {
+function normalizeArchPackage(desc, files) {
   const first = (key) => desc[key]?.[0] || "";
   const all = (key) => desc[key] || [];
   const filename = first("FILENAME");
@@ -217,8 +323,213 @@ function normalizePackage(desc, files) {
   };
 }
 
+const RPM_NS = {
+  repo: "http://linux.duke.edu/metadata/repo",
+  common: "http://linux.duke.edu/metadata/common",
+  rpm: "http://linux.duke.edu/metadata/rpm",
+  filelists: "http://linux.duke.edu/metadata/filelists",
+};
+
+const RPM_FLAG_OPERATORS = { EQ: "=", LT: "<", LE: "<=", GT: ">", GE: ">=" };
+
+// Reads createrepo_c metadata: repomd.xml -> primary (+ filelists when available).
+// Resolves to [] when the repo hasn't been published yet.
+async function loadFedoraPackages({ force = false } = {}) {
+  const cacheBust = force ? `?t=${Date.now()}` : "";
+  const response = await fetch(`${FEDORA_PATH}/repodata/repomd.xml${cacheBust}`, {
+    cache: force ? "no-store" : "default",
+  });
+  // Without a 404.html, Cloudflare Pages answers unknown paths with index.html (200),
+  // so an HTML body means "not published yet" just like a real 404.
+  const isHtml = (response.headers.get("content-type") || "").includes("text/html");
+  if (response.status === 404 || (response.ok && isHtml)) return [];
+  if (!response.ok) throw new Error(`Repository metadata returned ${response.status}`);
+
+  const hrefs = repomdDataHrefs(parseXml(await response.text(), "repomd.xml"));
+  if (!hrefs.primary) throw new Error("repomd.xml lists no primary metadata.");
+
+  // Data files are content-addressed (hash in the name), so they never need a cache bust.
+  const [primaryText, filelistsText] = await Promise.all([
+    fetchRpmMetadata(hrefs.primary),
+    hrefs.filelists
+      ? fetchRpmMetadata(hrefs.filelists).catch((error) => {
+          console.warn("Skipping file lists", error);
+          return null;
+        })
+      : null,
+  ]);
+
+  const filesByPkgid = filelistsText ? filesFromFilelists(parseXml(filelistsText, "filelists")) : null;
+  return packagesFromPrimary(parseXml(primaryText, "primary"), filesByPkgid);
+}
+
+// Fetches one repodata file as text, decompressing by its href extension.
+async function fetchRpmMetadata(href) {
+  const fileName = href.split("/").pop();
+  const isGzip = href.endsWith(".gz");
+  if (!isGzip && !href.endsWith(".xml")) {
+    const extension = fileName.slice(fileName.lastIndexOf("."));
+    throw new Error(`Fedora metadata is ${extension}-compressed, which this page can't read (only .gz is supported).`);
+  }
+  if (isGzip && !("DecompressionStream" in window)) {
+    throw new Error("This browser cannot read gzip streams directly.");
+  }
+
+  const response = await fetch(`${FEDORA_PATH}/${href}`);
+  if (!response.ok) throw new Error(`${fileName} returned ${response.status}`);
+  if (!isGzip) return response.text();
+  return new Response(response.body.pipeThrough(new DecompressionStream("gzip"))).text();
+}
+
+function parseXml(text, label) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (!doc.documentElement || doc.getElementsByTagName("parsererror").length > 0) {
+    throw new Error(`Could not parse ${label} metadata.`);
+  }
+  return doc;
+}
+
+// Maps each repomd <data type="..."> to its location href.
+function repomdDataHrefs(doc) {
+  const hrefs = {};
+  childrenNS(doc.documentElement, RPM_NS.repo, "data").forEach((data) => {
+    const href = childNS(data, RPM_NS.repo, "location")?.getAttribute("href");
+    if (href) hrefs[data.getAttribute("type")] = href;
+  });
+  return hrefs;
+}
+
+// Maps pkgid (package checksum) -> file paths; directories get a trailing slash like pacman's lists.
+function filesFromFilelists(doc) {
+  const byPkgid = new Map();
+  childrenNS(doc.documentElement, RPM_NS.filelists, "package").forEach((pkg) => {
+    const files = childrenNS(pkg, RPM_NS.filelists, "file").map((file) =>
+      file.getAttribute("type") === "dir" ? `${textOf(file)}/` : textOf(file),
+    );
+    byPkgid.set(pkg.getAttribute("pkgid"), files);
+  });
+  return byPkgid;
+}
+
+// Normalizes primary.xml into the same package shape the Arch path renders.
+// One tree can hold builds for several Fedora releases, so keep the newest build per name.
+function packagesFromPrimary(doc, filesByPkgid) {
+  const newest = new Map();
+  childrenNS(doc.documentElement, RPM_NS.common, "package")
+    .filter((el) => el.getAttribute("type") === "rpm")
+    .map((el) => normalizeRpmPackage(el, filesByPkgid))
+    .filter((pkg) => pkg.name && pkg.version && pkg.arch !== "src")
+    .forEach((pkg) => {
+      const seen = newest.get(pkg.name);
+      if (!seen || pkg.buildDate > seen.buildDate) newest.set(pkg.name, pkg);
+    });
+  return [...newest.values()];
+}
+
+function normalizeRpmPackage(el, filesByPkgid) {
+  const child = (name) => childNS(el, RPM_NS.common, name);
+  const text = (name) => textOf(child(name));
+  const attr = (name, attribute) => child(name)?.getAttribute(attribute) || "";
+  const format = child("format");
+  const rpmText = (name) => (format ? textOf(childNS(format, RPM_NS.rpm, name)) : "");
+  const deps = (kind) => {
+    const list = format && childNS(format, RPM_NS.rpm, kind);
+    return list ? childrenNS(list, RPM_NS.rpm, "entry") : [];
+  };
+
+  const name = text("name");
+  const version = child("version");
+  const checksum = child("checksum");
+  const pkgid = textOf(checksum);
+  const href = attr("location", "href");
+  const license = rpmText("license");
+
+  return {
+    filename: href.split("/").pop(),
+    name,
+    base: rpmText("sourcerpm"),
+    version: version ? formatEvr(version) : "",
+    description: text("summary"),
+    csize: Number(attr("size", "package") || 0),
+    isize: Number(attr("size", "installed") || 0),
+    sha256sum: checksum?.getAttribute("type") === "sha256" ? pkgid : "",
+    url: text("url"),
+    licenses: license ? [license] : [],
+    arch: text("arch"),
+    buildDate: Number(attr("time", "build") || 0),
+    packager: text("packager"),
+    depends: rpmRequires(deps("requires")),
+    optdepends: uniqueDeps([...deps("recommends"), ...deps("suggests")].map(formatRpmDep)),
+    makedepends: [],
+    conflicts: uniqueDeps(deps("conflicts").map(formatRpmDep)),
+    provides: uniqueDeps(
+      deps("provides")
+        .filter((entry) => !isSelfProvide(entry.getAttribute("name"), name))
+        .map(formatRpmDep),
+    ),
+    // primary.xml only carries a subset of paths, so show nothing rather than a partial list.
+    files: filesByPkgid?.get(pkgid) || [],
+    downloadUrl: href ? `${FEDORA_PATH}/${href}` : "",
+  };
+}
+
+// Requires minus rpm's machinery: rpmlib()/rtld() features and file-path deps (/bin/sh)
+// are dropped, and per-symbol soname variants collapse to the soname
+// (libc.so.6(GLIBC_2.34)(64bit) -> libc.so.6).
+function rpmRequires(entries) {
+  return uniqueDeps(
+    entries
+      .map((entry) => {
+        const name = entry.getAttribute("name");
+        if (name.startsWith("/") || /^(rpmlib|rtld)\(/.test(name)) return "";
+        const soname = name.match(/^([^()]+\.so[^()]*)\(/);
+        return soname ? soname[1] : formatRpmDep(entry);
+      })
+      .filter(Boolean),
+  );
+}
+
+// rpm auto-provides the package name, its arch-qualified form, and config(name).
+function isSelfProvide(provide, name) {
+  return provide === name || provide.startsWith(`${name}(`) || provide === `config(${name})`;
+}
+
+function formatRpmDep(entry) {
+  const name = entry.getAttribute("name");
+  const operator = RPM_FLAG_OPERATORS[entry.getAttribute("flags")];
+  return operator ? `${name} ${operator} ${formatEvr(entry)}` : name;
+}
+
+// `[epoch:]ver[-rel]`, omitting a zero epoch the way dnf does.
+function formatEvr(el) {
+  const epoch = el.getAttribute("epoch");
+  const ver = el.getAttribute("ver") || "";
+  const rel = el.getAttribute("rel");
+  return `${epoch && epoch !== "0" ? `${epoch}:` : ""}${ver}${rel ? `-${rel}` : ""}`;
+}
+
+function uniqueDeps(values) {
+  return [...new Set(values)];
+}
+
+// Element children of `node` in namespace `ns` named `localName`.
+function childrenNS(node, ns, localName) {
+  return Array.from(node.childNodes).filter(
+    (child) => child.nodeType === 1 && child.namespaceURI === ns && child.localName === localName,
+  );
+}
+
+function childNS(node, ns, localName) {
+  return childrenNS(node, ns, localName)[0] || null;
+}
+
+function textOf(node) {
+  return node ? node.textContent.trim() : "";
+}
+
+// Arch splits out `-debug`; Fedora splits out `-debuginfo` / `-debugsource`.
 function isDebugPackage(pkg) {
-  return pkg.name.endsWith("-debug");
+  return /-debug(info|source)?$/.test(pkg.name);
 }
 
 function filterPackages(query) {
@@ -253,7 +564,7 @@ function searchableText(pkg) {
 function renderStats() {
   const arches = [...new Set(state.packages.map((pkg) => pkg.arch).filter(Boolean))];
   const totalSize = state.packages.reduce((sum, pkg) => sum + (pkg.csize || 0), 0);
-  const latestBuild = Math.max(...state.packages.map((pkg) => pkg.buildDate || 0));
+  const latestBuild = Math.max(0, ...state.packages.map((pkg) => pkg.buildDate || 0));
 
   els.statPackages.textContent = String(state.packages.length);
   els.statArches.textContent = arches.join(", ") || "—";
@@ -291,7 +602,7 @@ function renderPackages() {
   els.list.querySelectorAll("[data-package]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedName = button.dataset.package;
-      window.history.replaceState(null, "", `#${encodeURIComponent(state.selectedName)}`);
+      updateUrl({ packageName: state.selectedName });
       renderPackages();
     });
   });
@@ -310,7 +621,8 @@ function selectedPackage() {
 function renderDetails(pkg) {
   if (!pkg) return;
 
-  const installCommand = `sudo pacman -S ${pkg.name}`;
+  const distro = DISTROS[state.distro];
+  const installCommand = distro.installCommand(pkg.name);
   const upstream = pkg.url
     ? `<a href="${escapeAttr(pkg.url)}" rel="noreferrer">${escapeHtml(cleanUrl(pkg.url))}</a>`
     : "—";
@@ -336,7 +648,7 @@ function renderDetails(pkg) {
       ${metaItem("Installed", formatBytes(pkg.isize))}
       ${metaItem("Build date", pkg.buildDate ? formatFullDate(pkg.buildDate) : "—")}
       ${metaItem("License", pkg.licenses.join(", ") || "—")}
-      ${metaItem("Package base", pkg.base || "—")}
+      ${metaItem(distro.baseLabel, pkg.base || "—")}
       ${metaItem("Upstream", upstream, true)}
     </div>
 

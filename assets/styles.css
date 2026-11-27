@@ -300,6 +300,7 @@ pre,
 
 .card-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -307,10 +308,68 @@ pre,
   border-bottom: 1px solid var(--line);
 }
 
-.card-heading span {
+.card-heading > span {
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--ink-2);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Distro switch: a native radio group styled as a segmented control */
+.distro-switch {
+  display: inline-flex;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+}
+
+.distro-switch label {
+  position: relative;
+  display: inline-flex;
+}
+
+.distro-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.distro-switch span {
+  display: inline-grid;
+  place-items: center;
+  height: 28px;
+  padding: 0 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+  border-radius: var(--r-xs);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+.distro-switch label:hover span {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.distro-switch input:checked + span {
+  color: var(--accent-2);
+  background: var(--accent-tint);
+}
+
+.distro-switch input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .install-card pre {
@@ -322,6 +381,7 @@ pre,
   color: var(--code-ink);
   background: var(--code-bg);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .card-note {
@@ -339,6 +399,7 @@ pre,
   color: var(--ink);
   background: var(--surface-2);
   border-radius: var(--r-xs);
+  overflow-wrap: anywhere;
 }
 
 /* Icon buttons (copy / download / external) */
@@ -527,6 +588,11 @@ button:disabled {
   grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
   gap: clamp(1.5rem, 4vw, 3rem);
   align-items: start;
+}
+
+/* `display: grid` above would otherwise override the hidden attribute */
+.package-layout[hidden] {
+  display: none;
 }
 
 /* ---------- Package index ---------- */

@@ -1,0 +1,75 @@
+name: sign-fedora-repo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "fedora/*/*.rpm"
+      - "scripts/sign-fedora-repo.sh"
+      - ".github/workflows/sign-fedora-repo.yml"
+
+permissions:
+  contents: write
+
+# Separate from sign-repo's group: a shared group would let GitHub cancel a
+# pending Arch run when a Fedora run queues (one pending run per group).
+concurrency:
+  group: sign-fedora-repo
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    # Match the RPM build base used by package repos (oldest supported Fedora).
+    container: fedora:44
+
+    steps:
+      - name: Install tools
+        run: dnf install -y --setopt=install_weak_deps=False git gnupg2 rpm-sign createrepo_c
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Import signing key
+        env:
+          PACKAGE_SIGNING_KEY: ${{ secrets.PACKAGE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$PACKAGE_SIGNING_KEY"
+          install -m 700 -d ~/.gnupg
+          printf '%s\n' "$PACKAGE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --list-secret-keys --keyid-format LONG
+
+      - name: Sign RPMs and repository metadata
+        env:
+          GPG_KEY_ID: ${{ secrets.PACKAGE_SIGNING_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.PACKAGE_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$GPG_KEY_ID"
+          ./scripts/sign-fedora-repo.sh --gpg-key "$GPG_KEY_ID"
+
+      - name: Commit signatures
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fedora/
+          if git diff --cached --quiet; then
+            echo "No signature changes to commit."
+            exit 0
+          fi
+          git commit -m "Sign Fedora package repository"
+          # Other publishers push to main concurrently. Pushes that only touch
+          # x86_64/ rebase cleanly; a real conflict in our own dir fails loudly
+          # and the next package push reruns this workflow.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main || { git rebase --abort; exit 1; }
+            git push && exit 0
+            echo "Push attempt $attempt lost a race; retrying"
+            sleep $((attempt * 5))
+          done
+          exit 1

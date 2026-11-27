@@ -37,3 +37,65 @@ jobs:
 
           diff -ru "$tmp/original-db" "$tmp/rebuilt-db"
           diff -ru "$tmp/original-files" "$tmp/rebuilt-files"
+
+  validate-fedora:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    steps:
+      - name: Install tools
+        run: dnf install -y --setopt=install_weak_deps=False git gnupg2 python3 rpm
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Repodata must list exactly the RPMs on disk, by checksum. Holds after a
+      # publish (publish-rpms.sh regenerates it) and after signing.
+      - name: Validate repodata matches RPMs
+        run: |
+          set -euo pipefail
+          dir=fedora/x86_64
+          if [[ ! -d "$dir" ]]; then
+            echo "No Fedora repo yet."
+            exit 0
+          fi
+          python3 - "$dir" <<'PY'
+          import gzip, hashlib, sys, xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          ns = {"repo": "http://linux.duke.edu/metadata/repo", "common": "http://linux.duke.edu/metadata/common"}
+          repomd = ET.parse(root / "repodata/repomd.xml")
+          href = repomd.find("repo:data[@type='primary']/repo:location", ns).get("href")
+          primary = ET.fromstring(gzip.decompress((root / href).read_bytes()))
+
+          listed = {
+              pkg.find("common:location", ns).get("href"): pkg.find("common:checksum", ns).text
+              for pkg in primary.findall("common:package", ns)
+          }
+          on_disk = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in root.glob("*.rpm")}
+          if listed != on_disk:
+              for name in sorted(set(listed) | set(on_disk)):
+                  if listed.get(name) != on_disk.get(name):
+                      print(f"mismatch {name}: repodata={listed.get(name)} disk={on_disk.get(name)}")
+              sys.exit("repodata is out of sync with fedora/x86_64/*.rpm; run scripts/publish-rpms.sh")
+          print(f"repodata lists {len(listed)} RPM(s), all checksums match")
+          PY
+
+      # Only once signed: a publisher push is unsigned until sign-fedora-repo runs.
+      - name: Validate signatures and dnf client path
+        run: |
+          set -euo pipefail
+          dir="$PWD/fedora/x86_64"
+          if [[ ! -f "$dir/repodata/repomd.xml.asc" ]]; then
+            echo "Repo metadata not signed yet; skipping."
+            exit 0
+          fi
+          rpmkeys --import mjiang-extras.gpg
+          rpmkeys --define '_pkgverify_level signature' --checksig "$dir"/*.rpm
+          # The published .repo file, pointed at this checkout instead of the site.
+          sed -e "s|^baseurl=.*|baseurl=file://$dir|" \
+              -e "s|^gpgkey=.*|gpgkey=file://$PWD/mjiang-extras.gpg|" \
+              mjiang-extras.repo > /etc/yum.repos.d/mjiang-extras.repo
+          dnf -y --disablerepo='*' --enablerepo=mjiang-extras makecache
+          dnf --disablerepo='*' --enablerepo=mjiang-extras repoquery --available

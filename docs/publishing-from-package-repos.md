@@ -386,6 +386,95 @@ mjiang-extras/scripts/publish-packages.sh --repo-dir mjiang-extras ./out/*.pkg.t
 
 If direct pushes to `mjiang-extras/main` are not allowed, replace the final `git push` flow with a branch push and PR creation. Ask the operator before doing this because it changes the publishing path from automatic publishing to review-gated publishing.
 
+## Publishing Fedora RPMs
+
+The same repository also serves a dnf repo at `fedora/x86_64/` (one tree for
+every supported Fedora release; `noarch` RPMs live there too). The flow mirrors
+Arch: the package repo builds RPMs, runs `scripts/publish-rpms.sh` against a
+checkout of this repo, pushes, and `sign-fedora-repo` signs centrally.
+
+- Build in `fedora:44`, the oldest Fedora release still supported once Fedora 43
+  reaches end of life on 2026-12-01. RPMs linked against its glibc run on
+  44 and 45. Bump the pin when 44 reaches end of life (2027-06-02).
+- Keep the spec file next to the `PKGBUILD` and keep their versions in sync
+  (add it to release-please `extra-files` with the same
+  `x-release-please-version` marker if the repo uses release-please).
+- Do not sign RPMs in the package repo.
+- Arch and Fedora publishes can race on `main`. They touch disjoint
+  directories, so `git pull --rebase` before `git push` resolves the race.
+
+```yaml
+name: publish-fedora-package
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    steps:
+      - name: Install build tools
+        run: dnf install -y --setopt=install_weak_deps=False rpm-build createrepo_c git
+
+      - name: Checkout package repo
+        uses: actions/checkout@v4
+
+      - name: Build RPM
+        run: |
+          set -euo pipefail
+          rpmbuild -bb --define "_sourcedir $PWD" --define "_rpmdir $PWD/rpms" PACKAGE.spec
+
+      - name: Checkout mjiang-extras
+        uses: actions/checkout@v4
+        with:
+          repository: matthewyjiang/mjiang-extras
+          token: ${{ secrets.MJIANG_EXTRAS_PUSH_TOKEN }}
+          path: mjiang-extras
+
+      - name: Publish RPMs
+        run: |
+          set -euo pipefail
+          mjiang-extras/scripts/publish-rpms.sh --repo-dir mjiang-extras rpms/*/*.rpm
+
+          cd mjiang-extras
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fedora/
+          git commit -m "chore(fedora): update packages from ${{ github.repository }}" || exit 0
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && exit 0
+            sleep $((attempt * 5))
+          done
+          exit 1
+```
+
+After the first run, verify that the RPM landed in `fedora/x86_64/`, the
+`sign-fedora-repo` workflow passed, and `repodata/repomd.xml.asc` exists.
+Then on a Fedora machine:
+
+```bash
+sudo dnf config-manager addrepo --from-repofile=https://repo.matthewyjiang.com/mjiang-extras.repo
+sudo dnf install PACKAGE
+```
+
+### Fedora troubleshooting
+
+- **`Signature verification failed` for repomd.xml right after a publish**:
+  the publish push drops the old `repomd.xml.asc`; it returns when
+  `sign-fedora-repo` finishes. Check that workflow's run.
+- **RPM file over 25 MiB**: Cloudflare Pages rejects it and keeps serving the
+  previous deploy. Check sizes in the package workflow before publishing.
+- **Package needs RPM Fusion** (for example `Requires: steam`): users must
+  enable RPM Fusion first; say so in the package README.
+
 ## How `publish-packages.sh` behaves
 
 The script is intentionally package-name aware:

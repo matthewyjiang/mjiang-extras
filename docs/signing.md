@@ -1,7 +1,11 @@
 # Repository signing
 
-This repository is set up to sign every `x86_64/*.pkg.tar.zst` package and the
-pacman database so users can use:
+This repository signs both package trees with the same GPG key:
+
+- Arch: every `x86_64/*.pkg.tar.zst` package and the pacman database.
+- Fedora: every `fedora/x86_64/*.rpm` and `fedora/x86_64/repodata/repomd.xml`.
+
+Pacman users get `SigLevel = Required`:
 
 ```ini
 [mjiang-extras]
@@ -9,7 +13,12 @@ SigLevel = Required
 Server = https://repo.matthewyjiang.com/$arch
 ```
 
+Fedora users get `gpgcheck=1` and `repo_gpgcheck=1` from
+[`mjiang-extras.repo`](../mjiang-extras.repo).
+
 ## What is automated
+
+### Arch
 
 - `.github/workflows/sign-repo.yml` runs on package changes or manually.
 - It imports a private GPG key from GitHub Actions secrets.
@@ -18,6 +27,18 @@ Server = https://repo.matthewyjiang.com/$arch
   - `x86_64/mjiang-extras.db.tar.gz.sig`
   - `x86_64/mjiang-extras.files.tar.gz.sig`
 - It commits those signatures back to `main`.
+
+### Fedora
+
+- `.github/workflows/sign-fedora-repo.yml` runs when RPMs change, or manually.
+- It runs `scripts/sign-fedora-repo.sh`, which:
+  - signs only RPMs not already signed by this key (signed RPMs stay
+    byte-identical, so git does not churn on large binaries);
+  - regenerates `fedora/x86_64/repodata/` with `createrepo_c`;
+  - writes `fedora/x86_64/repodata/repomd.xml.asc`.
+- It uses the same `PACKAGE_SIGNING_KEY*` secrets as the Arch workflow.
+- `.github/workflows/test-fedora-scripts.yml` exercises publish, sign, and
+  `dnf install` end to end with a throwaway key on PRs that touch the scripts.
 
 ## One-time manual setup
 
@@ -129,13 +150,29 @@ Finally:
 sudo pacman -Syy
 ```
 
+Fedora clients:
+
+```bash
+sudo dnf config-manager addrepo --from-repofile=https://repo.matthewyjiang.com/mjiang-extras.repo
+```
+
+dnf prompts to import the key from `mjiang-extras.gpg` on first install.
+
+## Key expiry
+
+The key expires on 2028-06-10. Before then, extend it (`gpg --quick-set-expire`),
+re-export `mjiang-extras.gpg`, and update the `PACKAGE_SIGNING_KEY` secret.
+Clients must re-import the public key: `pacman-key --add` on Arch, and on
+Fedora `sudo rpmkeys --import https://repo.matthewyjiang.com/mjiang-extras.gpg`.
+
 ## Local signing
 
 If you want to sign from a local checkout instead of GitHub Actions:
 
 ```bash
-GPG_KEY_ID=PACKAGE_SIGNING_KEY_ID scripts/sign-repo.sh
-git add x86_64/
+GPG_KEY_ID=PACKAGE_SIGNING_KEY_ID scripts/sign-repo.sh          # Arch
+GPG_KEY_ID=PACKAGE_SIGNING_KEY_ID scripts/sign-fedora-repo.sh   # Fedora
+git add x86_64/ fedora/
 git commit -m "Sign package repository"
 git push
 ```

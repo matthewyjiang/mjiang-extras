@@ -62,4 +62,13 @@ jobs:
             exit 0
           fi
           git commit -m "Sign package repository"
-          git push
+          # Other publishers push to main concurrently. Pushes that only touch
+          # fedora/ rebase cleanly; a real conflict in our own dir fails loudly
+          # and the next package push reruns this workflow.
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main || { git rebase --abort; exit 1; }
+            git push && exit 0
+            echo "Push attempt $attempt lost a race; retrying"
+            sleep $((attempt * 5))
+          done
+          exit 1

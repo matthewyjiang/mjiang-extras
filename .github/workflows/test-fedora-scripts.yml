@@ -63,8 +63,15 @@ jobs:
           git config --global user.name e2e
           git config --global user.email e2e@example.invalid
           git config --global --add safe.directory '*'
+          # The Actions checkout is shallow and cannot be pushed; seed the
+          # remote with a one-commit copy of the tree (Arch binaries omitted).
+          mkdir /tmp/seed
+          tar -c --exclude=.git --exclude=x86_64 . | tar -x -C /tmp/seed
+          git -C /tmp/seed init --quiet -b main
+          git -C /tmp/seed add -A
+          git -C /tmp/seed commit --quiet -m seed
           git init --quiet --bare /tmp/remote.git
-          git push --quiet /tmp/remote.git HEAD:refs/heads/main
+          git -C /tmp/seed push --quiet /tmp/remote.git main
           git clone --quiet /tmp/remote.git /tmp/pub-a
           git clone --quiet /tmp/remote.git /tmp/pub-b
           /tmp/pub-a/scripts/push-rpms.sh --repo-dir /tmp/pub-a --message "publish a" /tmp/rpms/e2e-hello-1.0/*/*.rpm

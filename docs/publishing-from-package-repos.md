@@ -443,6 +443,8 @@ jobs:
       - name: Publish RPMs
         run: |
           set -euo pipefail
+          # The fedora container runs as root; the checkout belongs to the runner user.
+          git config --global --add safe.directory "$PWD/mjiang-extras"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mjiang-extras/scripts/push-rpms.sh --repo-dir mjiang-extras \

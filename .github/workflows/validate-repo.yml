@@ -3,6 +3,9 @@ name: validate-repo
 on:
   push:
   pull_request:
+  # Signing bots push with GITHUB_TOKEN, which does not trigger push runs;
+  # dispatch to check the signed state.
+  workflow_dispatch:
 
 jobs:
   validate:

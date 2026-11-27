@@ -59,7 +59,8 @@ jobs:
             git fetch --quiet origin main
             git reset --quiet --hard origin/main
             ./scripts/sign-fedora-repo.sh --gpg-key "$GPG_KEY_ID"
-            git add fedora/
+            # fedora/ does not exist until the first RPM is published.
+            if [[ -d fedora ]]; then git add fedora/; fi
             if git diff --cached --quiet; then
               echo "No signature changes to commit."
               exit 0

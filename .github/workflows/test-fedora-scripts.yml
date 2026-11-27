@@ -70,7 +70,7 @@ jobs:
           git -C /tmp/seed init --quiet -b main
           git -C /tmp/seed add -A
           git -C /tmp/seed commit --quiet -m seed
-          git init --quiet --bare /tmp/remote.git
+          git init --quiet --bare -b main /tmp/remote.git
           git -C /tmp/seed push --quiet /tmp/remote.git main
           git clone --quiet /tmp/remote.git /tmp/pub-a
           git clone --quiet /tmp/remote.git /tmp/pub-b

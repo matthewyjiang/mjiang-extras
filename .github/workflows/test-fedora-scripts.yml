@@ -1,0 +1,126 @@
+name: test-fedora-scripts
+
+# End-to-end check of the Fedora publish -> sign -> dnf install path with a
+# throwaway key and a dummy RPM. No secrets, no pushes: the production signing
+# key is never touched, and scripts are exercised before they run on main.
+on:
+  pull_request:
+    paths:
+      - "scripts/publish-rpms.sh"
+      - "scripts/push-rpms.sh"
+      - "scripts/sign-fedora-repo.sh"
+      - "mjiang-extras.repo"
+      - ".github/workflows/test-fedora-scripts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    steps:
+      - name: Install tools
+        run: dnf install -y --setopt=install_weak_deps=False git gnupg2 rpm-build rpm-sign createrepo_c
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build dummy RPMs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/spec
+          # Two versions of one package plus a second package whose name is a
+          # prefix of the first, to prove old-version removal is by exact name.
+          for spec in "e2e-hello 1.0" "e2e-hello 2.0" "e2e-hello-extra 1.0"; do
+            read -r name version <<<"$spec"
+            cat > "/tmp/spec/$name-$version.spec" <<SPEC
+          Name: $name
+          Version: $version
+          Release: 1
+          Summary: dummy package for repo E2E
+          License: MIT
+          BuildArch: noarch
+          %description
+          dummy
+          %install
+          mkdir -p %{buildroot}/usr/share/$name
+          echo $version > %{buildroot}/usr/share/$name/version
+          %files
+          /usr/share/$name/version
+          SPEC
+            rpmbuild -bb --define "_rpmdir /tmp/rpms/$name-$version" "/tmp/spec/$name-$version.spec" >/dev/null
+          done
+          find /tmp/rpms -name '*.rpm'
+
+      # Two publishers from checkouts taken at the same commit: the second is
+      # stale when it runs and must still land on top of the first.
+      - name: Push from stale checkouts to a local remote
+        run: |
+          set -euo pipefail
+          git config --global user.name e2e
+          git config --global user.email e2e@example.invalid
+          git config --global --add safe.directory '*'
+          # The Actions checkout is shallow and cannot be pushed; seed the
+          # remote with a one-commit copy of the tree (Arch binaries omitted).
+          mkdir /tmp/seed
+          tar -c --exclude=.git --exclude=x86_64 . | tar -x -C /tmp/seed
+          git -C /tmp/seed init --quiet -b main
+          git -C /tmp/seed add -A
+          git -C /tmp/seed commit --quiet -m seed
+          git init --quiet --bare -b main /tmp/remote.git
+          git -C /tmp/seed push --quiet /tmp/remote.git main
+          git clone --quiet /tmp/remote.git /tmp/pub-a
+          git clone --quiet /tmp/remote.git /tmp/pub-b
+          /tmp/pub-a/scripts/push-rpms.sh --repo-dir /tmp/pub-a --message "publish a" /tmp/rpms/e2e-hello-1.0/*/*.rpm
+          /tmp/pub-b/scripts/push-rpms.sh --repo-dir /tmp/pub-b --message "publish b" /tmp/rpms/e2e-hello-extra-1.0/*/*.rpm
+          git clone --quiet /tmp/remote.git /tmp/check
+          git -C /tmp/check log --format=%s -2
+          test -f /tmp/check/fedora/x86_64/e2e-hello-1.0-1.noarch.rpm
+          test -f /tmp/check/fedora/x86_64/e2e-hello-extra-1.0-1.noarch.rpm
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          scripts/publish-rpms.sh /tmp/rpms/e2e-hello-1.0/*/*.rpm /tmp/rpms/e2e-hello-extra-1.0/*/*.rpm
+          scripts/publish-rpms.sh /tmp/rpms/e2e-hello-2.0/*/*.rpm
+          ls fedora/x86_64
+          test -f fedora/x86_64/e2e-hello-2.0-1.noarch.rpm
+          test ! -e fedora/x86_64/e2e-hello-1.0-1.noarch.rpm
+          test -f fedora/x86_64/e2e-hello-extra-1.0-1.noarch.rpm
+          test ! -e fedora/x86_64/repodata/repomd.xml.asc
+
+      - name: Sign with a throwaway key
+        run: |
+          set -euo pipefail
+          gpg --batch --pinentry-mode loopback --passphrase e2e \
+            --quick-generate-key 'e2e <e2e@example.invalid>' rsa4096 sign 1d
+          gpg --armor --export e2e@example.invalid > mjiang-extras.gpg
+          GPG_PASSPHRASE=e2e scripts/sign-fedora-repo.sh --gpg-key e2e@example.invalid
+          # Second run must not rewrite already-signed RPMs.
+          sha256sum fedora/x86_64/*.rpm > /tmp/before
+          GPG_PASSPHRASE=e2e scripts/sign-fedora-repo.sh --gpg-key e2e@example.invalid
+          sha256sum -c /tmp/before
+
+      - name: Install through dnf with gpgcheck and repo_gpgcheck
+        run: |
+          set -euo pipefail
+          sed -e "s|^baseurl=.*|baseurl=file://$PWD/fedora/x86_64|" \
+              -e "s|^gpgkey=.*|gpgkey=file://$PWD/mjiang-extras.gpg|" \
+              mjiang-extras.repo > /etc/yum.repos.d/mjiang-extras.repo
+          dnf -y --disablerepo='*' --enablerepo=mjiang-extras install e2e-hello e2e-hello-extra
+          test "$(cat /usr/share/e2e-hello/version)" = 2.0
+
+      - name: Tampered metadata is rejected
+        run: |
+          set -euo pipefail
+          dnf clean all
+          echo '<!-- tampered -->' >> fedora/x86_64/repodata/repomd.xml
+          # dnf5 skips a repo whose metadata fails verification and still
+          # exits 0 by default; disable skipping so the rejection is visible.
+          if dnf -y --setopt=skip_if_unavailable=False --disablerepo='*' --enablerepo=mjiang-extras makecache; then
+            echo "dnf accepted repomd.xml with a bad signature" >&2
+            exit 1
+          fi

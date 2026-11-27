@@ -2,6 +2,8 @@
 
 Browse the package database at <https://repo.matthewyjiang.com/>.
 
+## Arch Linux
+
 Add this repo to your system:
 ```bash
 curl -fsSL https://repo.matthewyjiang.com/mjiang-extras.gpg | sudo pacman-key --add -
@@ -10,12 +12,15 @@ printf '\n[mjiang-extras]\nSigLevel = Required\nServer = https://repo.matthewyji
 sudo pacman -Syy
 ```
 
-Replace `8269F3B4ED361F6BE6C0233DD113C94146264D14` with the fingerprint shown in [`docs/signing.md`](docs/signing.md) after the signing key is created.
+## Fedora
 
-## List of packages and versions:
-- git-credential-1password-git r37.3c31135-1
-- git-credential-1password-git-debug r37.3c31135-1
-- razer-coolingpad-linux 0.2.0-1 (`any`)
+Fedora 44 and newer, x86_64:
+```bash
+sudo dnf config-manager addrepo --from-repofile=https://repo.matthewyjiang.com/mjiang-extras.repo
+sudo dnf install rho-coding-agent
+```
+
+dnf asks to import the signing key (fingerprint `8269F3B4ED361F6BE6C0233DD113C94146264D14`) on first install. Packages and repo metadata are both signed (`gpgcheck=1`, `repo_gpgcheck=1`).
 
 ## Publishing packages
 
@@ -27,7 +32,8 @@ Package source repos can publish built packages here automatically with GitHub A
 For manual updates, build the package, then run:
 
 ```bash
-scripts/publish-packages.sh /path/to/*.pkg.tar.zst
+scripts/publish-packages.sh /path/to/*.pkg.tar.zst   # Arch
+scripts/publish-rpms.sh /path/to/*.rpm               # Fedora
 ```
 
-The script copies packages into `x86_64/`, removes older archives for the same package names, and refreshes the repo database. Packages with `arch=('any')` still go in `x86_64/` in this repo layout, because clients fetch from `https://repo.matthewyjiang.com/$arch`.
+Each script copies packages into its tree (`x86_64/` or `fedora/x86_64/`), removes older builds of the same package names, and refreshes the repo metadata. Signing happens centrally after the push. Architecture-independent packages (`any` / `noarch`) still go in the `x86_64` trees, because clients fetch from `$arch` / `$basearch` paths.

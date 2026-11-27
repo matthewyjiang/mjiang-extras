@@ -13,3 +13,12 @@
 
 /x86_64/*.files.tar.gz
   Cache-Control: public, max-age=300, must-revalidate
+
+/fedora/*/repodata/repomd.xml
+  Cache-Control: public, max-age=300, must-revalidate
+
+/fedora/*/repodata/repomd.xml.asc
+  Cache-Control: public, max-age=300, must-revalidate
+
+/mjiang-extras.repo
+  Content-Type: text/plain; charset=utf-8

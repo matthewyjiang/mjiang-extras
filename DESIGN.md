@@ -69,6 +69,10 @@ Fonts load via Google Fonts with `preconnect` + `display=swap`. Base body
 - **Detail panel:** the one framed surface (hairline, `--r-lg`, sticky). Meta
   renders as a ruled two-column definition list; deps as quiet mono chips;
   install command and files in ink terminal blocks.
+- **Distro switch:** native radio group styled as a segmented control in the
+  setup card heading (34px, hairline frame, `--r-sm`). Checked segment uses the
+  selection treatment (accent tint + accent text); focus ring on the segment.
+  It swaps the setup snippet, install command, and package data source.
 - **Buttons:** 44px, `--r-sm`. Primary = ink fill; ghost = transparent with a
   strong hairline. Copy buttons are small mono ghosts.
 - **Inputs:** 42px, strong hairline, accent border + 3px ring on focus.

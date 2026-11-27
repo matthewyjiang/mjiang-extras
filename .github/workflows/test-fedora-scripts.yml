@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - "scripts/publish-rpms.sh"
+      - "scripts/push-rpms.sh"
       - "scripts/sign-fedora-repo.sh"
       - "mjiang-extras.repo"
       - ".github/workflows/test-fedora-scripts.yml"
@@ -53,6 +54,25 @@ jobs:
             rpmbuild -bb --define "_rpmdir /tmp/rpms/$name-$version" "/tmp/spec/$name-$version.spec" >/dev/null
           done
           find /tmp/rpms -name '*.rpm'
+
+      # Two publishers from checkouts taken at the same commit: the second is
+      # stale when it runs and must still land on top of the first.
+      - name: Push from stale checkouts to a local remote
+        run: |
+          set -euo pipefail
+          git config --global user.name e2e
+          git config --global user.email e2e@example.invalid
+          git config --global --add safe.directory '*'
+          git init --quiet --bare /tmp/remote.git
+          git push --quiet /tmp/remote.git HEAD:refs/heads/main
+          git clone --quiet /tmp/remote.git /tmp/pub-a
+          git clone --quiet /tmp/remote.git /tmp/pub-b
+          /tmp/pub-a/scripts/push-rpms.sh --repo-dir /tmp/pub-a --message "publish a" /tmp/rpms/e2e-hello-1.0/*/*.rpm
+          /tmp/pub-b/scripts/push-rpms.sh --repo-dir /tmp/pub-b --message "publish b" /tmp/rpms/e2e-hello-extra-1.0/*/*.rpm
+          git clone --quiet /tmp/remote.git /tmp/check
+          git -C /tmp/check log --format=%s -2
+          test -f /tmp/check/fedora/x86_64/e2e-hello-1.0-1.noarch.rpm
+          test -f /tmp/check/fedora/x86_64/e2e-hello-extra-1.0-1.noarch.rpm
 
       - name: Publish
         run: |

@@ -400,8 +400,9 @@ checkout of this repo, pushes, and `sign-fedora-repo` signs centrally.
   (add it to release-please `extra-files` with the same
   `x-release-please-version` marker if the repo uses release-please).
 - Do not sign RPMs in the package repo.
-- Arch and Fedora publishes can race on `main`. They touch disjoint
-  directories, so `git pull --rebase` before `git push` resolves the race.
+- Publish with `scripts/push-rpms.sh`, not hand-written git. Every Fedora
+  writer rewrites `repodata/`, so `git pull --rebase` conflicts; the script
+  instead retries by republishing on a fresh `origin/main`.
 
 ```yaml
 name: publish-fedora-package
@@ -442,18 +443,11 @@ jobs:
       - name: Publish RPMs
         run: |
           set -euo pipefail
-          mjiang-extras/scripts/publish-rpms.sh --repo-dir mjiang-extras rpms/*/*.rpm
-
-          cd mjiang-extras
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add fedora/
-          git commit -m "chore(fedora): update packages from ${{ github.repository }}" || exit 0
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin main && git push && exit 0
-            sleep $((attempt * 5))
-          done
-          exit 1
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mjiang-extras/scripts/push-rpms.sh --repo-dir mjiang-extras \
+            --message "chore(fedora): update packages from ${{ github.repository }}" \
+            rpms/*/*.rpm
 ```
 
 After the first run, verify that the RPM landed in `fedora/x86_64/`, the

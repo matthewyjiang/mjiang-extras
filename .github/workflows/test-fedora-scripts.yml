@@ -91,7 +91,9 @@ jobs:
           set -euo pipefail
           dnf clean all
           echo '<!-- tampered -->' >> fedora/x86_64/repodata/repomd.xml
-          if dnf -y --disablerepo='*' --enablerepo=mjiang-extras makecache; then
+          # dnf5 skips a repo whose metadata fails verification and still
+          # exits 0 by default; disable skipping so the rejection is visible.
+          if dnf -y --setopt=skip_if_unavailable=False --disablerepo='*' --enablerepo=mjiang-extras makecache; then
             echo "dnf accepted repomd.xml with a bad signature" >&2
             exit 1
           fi
